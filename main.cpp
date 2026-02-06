@@ -2,6 +2,10 @@
 #include <cmath>
 #include <stdlib.h>
 
+# define M_PI           3.14159265358979323846  /* pi */
+
+
+
 struct DroneState {
     // Important to note that this functions on a 2D plane!
     double x; // X pos
@@ -26,14 +30,29 @@ int main() {
             break;
         }
 
-        // Placeholder for command processing. In a real implementation, you would parse the command and update the drone's state accordingly.
-        // For example, you could have commands like 'w' for forward, 's' for backward, 'a' for left turn, and 'd' for right turn.
+        // Command Processing
+        switch (command) {
+            case 'w': // Move forward
+                drone.speed += 1.0; // Increase speed
+                break;
+            case 's': // Move backward
+                drone.speed -= 1.0; // Decrease speed
+                break;
+            case 'a': // Turn left
+                drone.heading += M_PI / 18; // Turn left by 10 degrees
+                break;
+            case 'd': // Turn right
+                drone.heading -= M_PI / 18; // Turn right by 10 degrees
+                break;
+            default:
+                std::cout << "Invalid Command: " << command << "Please enter a valid directional command. (w/a/s/d)" << std::endl;
+        }
 
         // Update pos
         drone.x += drone.speed * std::cos(drone.heading * dt);
         drone.y += drone.speed * std::sin(drone.heading * dt);
         
-        std::cout<< "x: " << drone.x << "y: " << drone.y << "heading: " << drone.heading << "speed: " << drone.speed << std::endl;
+        std::cout<< "x: " << drone.x << "| y: " << drone.y << "| heading: " << drone.heading << "| speed: " << drone.speed << std::endl;
     }
 
     return 0;
