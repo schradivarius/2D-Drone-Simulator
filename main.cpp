@@ -1,4 +1,7 @@
 #include "gridRender.h"
+#include <chrono>
+#include <thread>
+#include <cstdlib>
 
 struct DroneState {
     // Important to note that this functions on a 2D plane!
@@ -9,14 +12,51 @@ struct DroneState {
 };
 
 int main() {
-    renderGrid(0.0, 0.0, 0.0); // Initial render of the grid with the drone at the center
+    using clock = std::chrono::steady_clock;
+    using seconds = std::chrono::duration<double>;
 
-    DroneState drone{0.0, 0.0, 0.0, 0.0}; // Initial state
-    const double dt = 0.1; // in seconds, time step for the simulation
+    // renderGrid(0.0, 0.0, 0.0); // Initial render of the grid with the drone at the center
+
+    DroneState drone{0.0, 0.0, 0.0, 1.0}; // Initial state
+    const double dt = 1/30.0;
 
     std::cout << "Simulator started." << std::endl;
 
-    while (true) {
+    auto previousTime = clock::now(); // Tracks last frame time
+    double accumulator = 0.0; // Stores "leftover" real time
+
+    while(true) {
+        auto currentTime = clock::now();
+        seconds frameTime = currentTime - previousTime;
+        previousTime = currentTime;
+
+        accumulator += frameTime.count();
+
+        while(accumulator >= dt) {
+            // Update pos here
+                drone.x += drone.speed * std::cos(drone.heading)* dt;
+                drone.y += drone.speed * std::sin(drone.heading)* dt;
+
+                #ifdef _WIN32
+                    system("cls"); // Clear console on Windows
+                #else
+                    system("clear"); // Clear console on Unix/Linux
+                #endif
+
+                std::cout<< "X: " << drone.x << "\nY: " << drone.y << "\nHeading: " << drone.heading << "\nSpeed: " << drone.speed << std::endl;
+            drone.x += drone.speed * std::cos(drone.heading)*dt;
+            drone.y += drone.speed * std::sin(drone.heading)*dt;
+            accumulator -= dt;
+        }
+
+        // Render grid
+        // renderGrid(drone.x, drone.y, drone.heading); // Render the grid with the updated drone position and heading
+
+        // Sleep to avoid CPU burn
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    /*
+    while (false) {
         char command;
 
         std::cin >> command;
@@ -63,6 +103,6 @@ int main() {
 
         std::cout<< "x: " << drone.x << "| y: " << drone.y << "| heading: " << drone.heading << "| speed: " << drone.speed << std::endl;
     }
-
+    */
     return 0;
 }
