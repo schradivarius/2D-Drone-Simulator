@@ -1,10 +1,4 @@
-#include <iostream>
-#include <cmath>
-#include <stdlib.h>
-
-# define M_PI           3.14159265358979323846  /* pi */
-
-
+#include "gridRender.h"
 
 struct DroneState {
     // Important to note that this functions on a 2D plane!
@@ -15,8 +9,10 @@ struct DroneState {
 };
 
 int main() {
+    renderGrid(0.0, 0.0, 0.0); // Initial render of the grid with the drone at the center
+
     DroneState drone{0.0, 0.0, 0.0, 0.0}; // Initial state
-    const double dt = 0.1; // in seconds
+    const double dt = 0.1; // in seconds, time step for the simulation
 
     std::cout << "Simulator started." << std::endl;
 
@@ -30,7 +26,8 @@ int main() {
             break;
         }
 
-        // Command Processing
+        // Placeholder for command processing. In a real implementation, you would parse the command and update the drone's state accordingly.
+        // For example, you could have commands like 'w' for forward, 's' for backward, 'a' for left turn, and 'd' for right turn.
         switch (command) {
             case 'w': // Move forward
                 drone.speed += 1.0; // Increase speed
@@ -45,13 +42,25 @@ int main() {
                 drone.heading -= M_PI / 18; // Turn right by 10 degrees
                 break;
             default:
-                std::cout << "Invalid Command: " << command << "Please enter a valid directional command. (w/a/s/d)" << std::endl;
+                std::cout << "Unknown command: " << command << std::endl;
+        }
+
+        if(drone.speed < 0) {
+            drone.speed = 0; // No negative speed values (this isn't velocity!)
+        }
+
+        if (drone.heading > M_PI) {
+            drone.heading -= 2 * M_PI;
+        } else if (drone.heading < -M_PI) {
+            drone.heading += 2 * M_PI;
         }
 
         // Update pos
-        drone.x += drone.speed * std::cos(drone.heading * dt);
-        drone.y += drone.speed * std::sin(drone.heading * dt);
+        drone.x += drone.speed * std::cos(drone.heading)* dt;
+        drone.y += drone.speed * std::sin(drone.heading)* dt;
         
+        renderGrid(drone.x, drone.y, drone.heading); // Render the grid with the updated drone position and heading
+
         std::cout<< "x: " << drone.x << "| y: " << drone.y << "| heading: " << drone.heading << "| speed: " << drone.speed << std::endl;
     }
 
