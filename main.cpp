@@ -1,108 +1,107 @@
-#include "gridRender.h"
-#include <chrono>
-#include <thread>
-#include <cstdlib>
+#include "raylib.h"
+#include <cmath>
+#include <iostream>
 
 struct DroneState {
-    // Important to note that this functions on a 2D plane!
-    double x; // X pos
-    double y; // Y pos
-    double heading; // Direction the drone is heading in radians. 0 is facing right.
-    double speed;
+    float x;
+    float y;
+    float z;
+    float speed;
+    float vx;
+    float vy; 
+    float vz;
 };
 
 int main() {
-    using clock = std::chrono::steady_clock;
-    using seconds = std::chrono::duration<double>;
+    InitWindow(800, 600, "Drone Simulator 3D");
+    SetTargetFPS(60);
 
-    // renderGrid(0.0, 0.0, 0.0); // Initial render of the grid with the drone at the center
+    DroneState drone{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
-    DroneState drone{0.0, 0.0, 0.0, 1.0}; // Initial state
-    const double dt = 1/30.0;
+    Model droneModel = LoadModel("drone.obj"); // Load a 3D model for the drone
 
-    std::cout << "Simulator started." << std::endl;
+    // Camera setup
+    Camera3D camera = {};
+    camera.position = {0.0f, 5.0f, 10.0f};
+    camera.target = {drone.x, drone.y, drone.z};
+    camera.up = {0.0f, 1.0f, 0.0f};
+    camera.fovy = 45.0f;
+    camera.projection = CAMERA_PERSPECTIVE;
 
-    auto previousTime = clock::now(); // Tracks last frame time
-    double accumulator = 0.0; // Stores "leftover" real time
+    while (!WindowShouldClose()) {
+        // Update and draw will go here
+        float thrust = 10.0f;
+        float drag = 0.95f; // Drag force
+        float dt = GetFrameTime();
 
-    while(true) {
-        auto currentTime = clock::now();
-        seconds frameTime = currentTime - previousTime;
-        previousTime = currentTime;
-
-        accumulator += frameTime.count();
-
-        while(accumulator >= dt) {
-            // Update pos here
-                drone.x += drone.speed * std::cos(drone.heading)* dt;
-                drone.y += drone.speed * std::sin(drone.heading)* dt;
-
-                #ifdef _WIN32
-                    system("cls"); // Clear console on Windows
-                #else
-                    system("clear"); // Clear console on Unix/Linux
-                #endif
-
-                std::cout<< "X: " << drone.x << "\nY: " << drone.y << "\nHeading: " << drone.heading << "\nSpeed: " << drone.speed << std::endl;
-            drone.x += drone.speed * std::cos(drone.heading)*dt;
-            drone.y += drone.speed * std::sin(drone.heading)*dt;
-            accumulator -= dt;
+        // Rotation logic, using WASD because gamer
+        if (IsKeyDown(KEY_A)) {
+            drone.vx -= thrust * dt;
+        }
+        if (IsKeyDown(KEY_D)) {
+            drone.vx += thrust * dt;
+        }
+        if (IsKeyDown(KEY_LEFT_CONTROL)) {
+            drone.vy -= thrust * dt;
+        }
+         if (IsKeyDown(KEY_SPACE)) {
+            drone.vy += thrust * dt;
+        }
+        if (IsKeyDown(KEY_S)) {
+                drone.vz += thrust * dt;
+        }
+        if (IsKeyDown(KEY_W)) {
+                drone.vz -= thrust * dt;
         }
 
-        // Render grid
-        // renderGrid(drone.x, drone.y, drone.heading); // Render the grid with the updated drone position and heading
+        // Update position based on variables
+        drone.vx *= drag; 
+        drone.vy *= drag;
+        drone.vz *= drag;
+        drone.x += drone.vx * dt;
+        drone.y += drone.vy * dt;
+        drone.z += drone.vz * dt;
 
-        // Sleep to avoid CPU burn
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (drone.y < 0.0f) {
+            drone.y = 0.0f;
+            drone.vy = 0.0f; // Kill vertical velocity so it doesn't keep pushing down
+        }
+
+        // Update Camera to follow drone
+        float camDistance = 10.0f;
+        static float camAngleX = 0.0f;
+        static float camAngleY = 0.0f;
+
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            Vector2 mouseDelta = GetMouseDelta();
+            camAngleX -= mouseDelta.x * 0.003f;
+            camAngleY -= mouseDelta.y * 0.003f;
+            if (camAngleY > 1.5f) camAngleY = 1.5f;
+            if (camAngleY < -1.5f) camAngleY = -1.5f;
+        }
+
+        camera.position = {
+            drone.x + camDistance * sinf(camAngleX) * cosf(camAngleY),
+            drone.y + camDistance * sinf(camAngleY),
+            drone.z + camDistance * cosf(camAngleX) * cosf(camAngleY)
+        };
+        camera.target = {drone.x, drone.y, drone.z};
+
+
+        BeginDrawing();
+            ClearBackground(RAYWHITE);
+
+            BeginMode3D(camera);
+
+                DrawGrid(20, 1.0f); // Draw a grid for reference
+                
+                DrawModel(droneModel, {drone.x, drone.y, drone.z}, 1.0f, WHITE);
+
+                EndMode3D();
+
+        EndDrawing();
     }
-    /*
-    while (false) {
-        char command;
-
-        std::cin >> command;
-
-        if(!std::cin || command == 'q') {
-            std::cout << "Simulator Stopped." << std::endl;
-            break;
-        }
-
-        // Placeholder for command processing. In a real implementation, you would parse the command and update the drone's state accordingly.
-        // For example, you could have commands like 'w' for forward, 's' for backward, 'a' for left turn, and 'd' for right turn.
-        switch (command) {
-            case 'w': // Move forward
-                drone.speed += 1.0; // Increase speed
-                break;
-            case 's': // Move backward
-                drone.speed -= 1.0; // Decrease speed
-                break;
-            case 'a': // Turn left
-                drone.heading += M_PI / 18; // Turn left by 10 degrees
-                break;
-            case 'd': // Turn right
-                drone.heading -= M_PI / 18; // Turn right by 10 degrees
-                break;
-            default:
-                std::cout << "Unknown command: " << command << std::endl;
-        }
-
-        if(drone.speed < 0) {
-            drone.speed = 0; // No negative speed values (this isn't velocity!)
-        }
-
-        if (drone.heading > M_PI) {
-            drone.heading -= 2 * M_PI;
-        } else if (drone.heading < -M_PI) {
-            drone.heading += 2 * M_PI;
-        }
-
-        // Update pos
-        drone.x += drone.speed * std::cos(drone.heading)* dt;
-        drone.y += drone.speed * std::sin(drone.heading)* dt;
-        
-        renderGrid(drone.x, drone.y, drone.heading); // Render the grid with the updated drone position and heading
-
-        std::cout<< "x: " << drone.x << "| y: " << drone.y << "| heading: " << drone.heading << "| speed: " << drone.speed << std::endl;
-    }
-    */
+    UnloadModel(droneModel);
+    CloseWindow();
     return 0;
 }
